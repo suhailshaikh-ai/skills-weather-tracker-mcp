@@ -51,6 +51,28 @@ You ──prompt──▶ Copilot Agent Mode
 - Use a **public** repository so Actions minutes are free.
 - If the issue doesn't appear in 20 seconds, check the **Actions** tab for a running or failed job.
 
+## Weather CLI
+
+The CLI stores current Open-Meteo observations in the root `weather.db` SQLite database. Install its dependency with `npm install`, then run:
+
+```sh
+node src/cli.js add "London"
+node src/cli.js add "Tokyo"
+node src/cli.js list
+node src/cli.js list --limit 5
+node src/cli.js stats "London"
+```
+
+The same commands are available as npm scripts:
+
+```sh
+npm run add -- "London"
+npm run list -- --limit 5
+npm run stats -- "London"
+```
+
+`add` geocodes the city, fetches current temperature, humidity, wind speed, and WMO weather code, then saves a readable condition with the observation. `list` shows the newest logs first; `stats` reports the minimum, maximum, average temperature, and log count. Unknown cities and network failures are reported as concise errors.
+
 ---
 
 © 2026 • [MIT License](LICENSE)
