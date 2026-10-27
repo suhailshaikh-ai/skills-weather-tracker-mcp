@@ -41,3 +41,29 @@ export function getCityStats(city) {
     WHERE city = ? COLLATE NOCASE
   `).get(city);
 }
+
+// Return the latest temperature, average temperature, and log count per city.
+export function getCitySummaries() {
+  return database.prepare(`
+    WITH ranked_logs AS (
+      SELECT
+        city,
+        temperature_c,
+        AVG(temperature_c) OVER (PARTITION BY city COLLATE NOCASE) AS average_temperature,
+        COUNT(*) OVER (PARTITION BY city COLLATE NOCASE) AS log_count,
+        ROW_NUMBER() OVER (
+          PARTITION BY city COLLATE NOCASE
+          ORDER BY created_at DESC, id DESC
+        ) AS row_number
+      FROM weather_logs
+    )
+    SELECT
+      city,
+      temperature_c AS latest_temperature,
+      average_temperature,
+      log_count
+    FROM ranked_logs
+    WHERE row_number = 1
+    ORDER BY city COLLATE NOCASE
+  `).all();
+}
