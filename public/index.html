@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2f5ee">
+  <title>Weather Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f2f5ee;
+      --surface: #ffffff;
+      --ink: #172a26;
+      --muted: #6a7b75;
+      --line: #dce5dc;
+      --forest: #175c49;
+      --mint: #d9eee2;
+      --lime: #d9f36a;
+      --coral: #e76d50;
+      --blue: #477cbb;
+      font-family: "DM Sans", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--paper); color: var(--ink); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { max-width: 1440px; margin: 0 auto; padding: 28px 42px 44px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 14px; font-weight: 700; }
+    .brand-mark { display: grid; width: 35px; aspect-ratio: 1; place-items: center; border-radius: 50%; background: var(--forest); color: var(--lime); font-size: 18px; }
+    .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .status-dot { width: 8px; aspect-ratio: 1; border-radius: 50%; background: #6aaa74; box-shadow: 0 0 0 4px #6aaa7420; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 28px; padding: 36px 0 25px; }
+    .eyebrow { margin: 0 0 8px; color: var(--forest); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    h1 { margin: 0; font-family: Fraunces, Georgia, serif; font-size: 42px; font-weight: 500; line-height: 1.06; }
+    .intro-copy { max-width: 360px; margin: 0 0 3px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .add-form { display: flex; gap: 9px; width: min(100%, 560px); padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+    .add-form input { flex: 1; min-width: 0; padding: 9px 10px; border: 0; outline: 0; background: transparent; color: var(--ink); }
+    .add-form input::placeholder { color: #8b9993; }
+    .add-form button { min-height: 42px; padding: 0 17px; border: 0; border-radius: 4px; background: var(--forest); color: white; font-size: 13px; font-weight: 700; transition: background .16s ease, transform .16s ease; }
+    .add-form button:hover { transform: translateY(-1px); background: #104a3a; }
+    .add-form button:disabled { cursor: wait; opacity: .65; }
+    .notice { min-height: 19px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .notice.error { color: #b54835; }
+    .overview { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(310px, .9fr); gap: 16px; margin-top: 21px; }
+    .panel { min-width: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 17px 19px 13px; }
+    h2 { margin: 0; font-size: 14px; font-weight: 700; }
+    .panel-meta { color: var(--muted); font-size: 11px; }
+    .chart-wrap { height: 255px; padding: 0 17px 16px; }
+    #temperature-chart { width: 100%; height: 100%; }
+    .summary-list { display: grid; gap: 0; padding: 0 18px 8px; }
+    .summary-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 13px 0; border-top: 1px solid #e8eee8; animation: appear .28s ease both; }
+    .summary-city { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .summary-count { color: var(--muted); font-size: 11px; }
+    .summary-latest { grid-row: span 2; color: var(--forest); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .summary-average { color: var(--muted); font-size: 11px; }
+    .empty { padding: 22px 0; color: var(--muted); font-size: 12px; }
+    .logs-panel { margin-top: 16px; overflow: hidden; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+    thead { background: #f7f9f5; }
+    th { padding: 11px 17px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    td { padding: 12px 17px; border-top: 1px solid #e8eee8; font-size: 12px; }
+    tbody tr { animation: appear .25s ease both; }
+    .city-cell { font-weight: 700; }
+    .temperature-cell { color: var(--forest); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .condition { display: inline-flex; align-items: center; gap: 7px; }
+    .condition-mark { width: 7px; aspect-ratio: 1; border-radius: 50%; background: var(--coral); }
+    tbody tr:nth-child(3n + 2) .condition-mark { background: var(--blue); }
+    tbody tr:nth-child(3n) .condition-mark { background: #a7bd42; }
+    .subtle { color: var(--muted); }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 850px) {
+      .shell { padding: 22px 23px 34px; }
+      .overview { grid-template-columns: minmax(0, 1fr); }
+      .summary-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+      .intro { align-items: start; flex-direction: column; }
+    }
+    @media (max-width: 520px) {
+      .shell { padding: 17px 15px 25px; }
+      .topbar { padding-bottom: 17px; }
+      .intro { gap: 18px; padding: 27px 0 18px; }
+      h1 { font-size: 35px; }
+      .intro-copy { font-size: 13px; }
+      .add-form { gap: 4px; padding: 5px; }
+      .add-form input { padding-left: 8px; font-size: 13px; }
+      .add-form button { padding: 0 11px; font-size: 12px; }
+      .summary-list { grid-template-columns: minmax(0, 1fr); }
+      .chart-wrap { height: 225px; padding-right: 10px; padding-left: 10px; }
+      .panel-head { padding-right: 14px; padding-left: 14px; }
+      th, td { padding-right: 12px; padding-left: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">°</span><span>Weather Ledger</span></div>
+      <div class="status"><span class="status-dot" aria-hidden="true"></span><span id="connection-status">Connecting to your log</span></div>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">A living record of the weather</p>
+        <h1 id="page-title">Your places, right now.</h1>
+      </div>
+      <p class="intro-copy">Keep an eye on the conditions where life happens. Add a city to capture its latest reading.</p>
+    </section>
+
+    <section aria-label="Refresh weather for a city">
+      <form class="add-form" id="refresh-form">
+        <input id="city-input" name="city" type="text" placeholder="Try London, Tokyo, or Pune" autocomplete="address-level2" required aria-label="City name">
+        <button id="refresh-button" type="submit">Add / Refresh</button>
+      </form>
+      <p class="notice" id="notice" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="overview" aria-label="Weather overview">
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Temperature across your log</h2>
+          <span class="panel-meta">Latest 50 readings · °C</span>
+        </div>
+        <div class="chart-wrap"><canvas id="temperature-chart" aria-label="Temperature line chart for recent weather logs" role="img"></canvas></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head">
+          <h2>City snapshots</h2>
+          <span class="panel-meta" id="summary-count">0 places</span>
+        </div>
+        <div class="summary-list" id="summary-list"><p class="empty">Loading city summaries…</p></div>
+      </article>
+    </section>
+
+    <section class="panel logs-panel" aria-labelledby="logs-title">
+      <div class="panel-head">
+        <h2 id="logs-title">Recent readings</h2>
+        <span class="panel-meta" id="log-count">Latest 50</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>City</th><th>Temperature</th><th>Condition</th><th>Humidity</th><th>Wind</th><th>Logged</th></tr>
+          </thead>
+          <tbody id="logs-body"><tr><td class="subtle" colspan="6">Loading readings…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const logsBody = document.querySelector('#logs-body');
+    const summaryList = document.querySelector('#summary-list');
+    const notice = document.querySelector('#notice');
+    const refreshButton = document.querySelector('#refresh-button');
+    let temperatureChart;
+
+    // Display a temperature with one decimal place, or a placeholder when absent.
+    function formatTemperature(value) {
+      return Number.isFinite(value) ? `${value.toFixed(1)}°` : '—';
+    }
+
+    // Create a text-only table cell so API values are never interpreted as markup.
+    function appendCell(row, value, className = '') {
+      const cell = document.createElement('td');
+      if (className) cell.className = className;
+      cell.textContent = value;
+      row.append(cell);
+      return cell;
+    }
+
+    // Render recent weather records in the readings table.
+    function renderLogs(logs) {
+      logsBody.replaceChildren();
+      document.querySelector('#log-count').textContent = `${logs.length} of 50`;
+      if (!logs.length) {
+        const row = logsBody.insertRow();
+        appendCell(row, 'No readings yet. Add a city above.', 'subtle');
+        row.firstElementChild.colSpan = 6;
+        return;
+      }
+
+      for (const log of logs) {
+        const row = logsBody.insertRow();
+        appendCell(row, `${log.city}${log.country ? `, ${log.country}` : ''}`, 'city-cell');
+        appendCell(row, formatTemperature(log.temperature_c), 'temperature-cell');
+        const conditionCell = appendCell(row, '');
+        const condition = document.createElement('span');
+        condition.className = 'condition';
+        const mark = document.createElement('span');
+        mark.className = 'condition-mark';
+        mark.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.textContent = log.condition;
+        condition.append(mark, label);
+        conditionCell.append(condition);
+        appendCell(row, `${log.humidity}%`);
+        appendCell(row, `${Number(log.wind_kmh).toFixed(1)} km/h`);
+        appendCell(row, new Date(`${log.created_at.replace(' ', 'T')}Z`).toLocaleString([], {
+          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+        }), 'subtle');
+      }
+    }
+
+    // Render city-level latest and average temperatures with observation counts.
+    function renderSummaries(summaries) {
+      summaryList.replaceChildren();
+      document.querySelector('#summary-count').textContent = `${summaries.length} ${summaries.length === 1 ? 'place' : 'places'}`;
+      if (!summaries.length) {
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = 'City summaries will appear after the first reading.';
+        summaryList.append(empty);
+        return;
+      }
+
+      for (const summary of summaries) {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+        const city = document.createElement('div');
+        city.className = 'summary-city';
+        city.textContent = summary.city;
+        const latest = document.createElement('div');
+        latest.className = 'summary-latest';
+        latest.textContent = formatTemperature(summary.latest_temperature);
+        const count = document.createElement('div');
+        count.className = 'summary-count';
+        count.textContent = `${summary.log_count} ${summary.log_count === 1 ? 'reading' : 'readings'}`;
+        const average = document.createElement('div');
+        average.className = 'summary-average';
+        average.textContent = `Average ${formatTemperature(summary.average_temperature)}`;
+        card.append(city, latest, count, average);
+        summaryList.append(card);
+      }
+    }
+
+    // Update the temperature chart with the recent readings in chronological order.
+    function renderChart(logs) {
+      if (typeof Chart === 'undefined') return;
+      const chronological = [...logs].reverse();
+      const chartData = {
+        labels: chronological.map((log) => `${log.city} · ${new Date(`${log.created_at.replace(' ', 'T')}Z`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`),
+        datasets: [{
+          data: chronological.map((log) => log.temperature_c),
+          borderColor: '#175c49',
+          backgroundColor: 'rgba(217, 238, 226, .64)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#e76d50',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1.5,
+          fill: true,
+          tension: .32
+        }]
+      };
+
+      if (temperatureChart) {
+        temperatureChart.data = chartData;
+        temperatureChart.update();
+        return;
+      }
+
+      temperatureChart = new Chart(document.querySelector('#temperature-chart'), {
+        type: 'line',
+        data: chartData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (context) => ` ${context.parsed.y}°C` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#71817a', maxRotation: 0, autoSkip: true, maxTicksLimit: 7 } },
+            y: { grid: { color: '#e8eee8' }, ticks: { color: '#71817a', callback: (value) => `${value}°` } }
+          }
+        }
+      });
+    }
+
+    // Load logs and summaries together, then refresh all visible dashboard sections.
+    async function loadDashboard() {
+      const [logsResponse, summaryResponse] = await Promise.all([
+        fetch('/api/logs'),
+        fetch('/api/summary')
+      ]);
+      if (!logsResponse.ok || !summaryResponse.ok) throw new Error('Could not load weather records.');
+      const [{ logs }, { summaries }] = await Promise.all([logsResponse.json(), summaryResponse.json()]);
+      renderLogs(logs);
+      renderSummaries(summaries);
+      renderChart(logs);
+      document.querySelector('#connection-status').textContent = 'Live weather log';
+    }
+
+    // Fetch and save a new reading, then reload the dashboard data.
+    async function refreshCity(city) {
+      const url = new URL('/api/refresh', window.location.origin);
+      url.searchParams.set('city', city);
+      const response = await fetch(url, { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not refresh this city.');
+      await loadDashboard();
+      return data.weather;
+    }
+
+    document.querySelector('#refresh-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const input = document.querySelector('#city-input');
+      const city = input.value.trim();
+      if (!city) return;
+
+      notice.className = 'notice';
+      notice.textContent = `Fetching current weather for ${city}…`;
+      refreshButton.disabled = true;
+      try {
+        const weather = await refreshCity(city);
+        notice.textContent = `Added ${weather.city}: ${formatTemperature(weather.temperature_c)} · ${weather.condition}.`;
+        input.value = '';
+      } catch (error) {
+        notice.className = 'notice error';
+        notice.textContent = error.message;
+      } finally {
+        refreshButton.disabled = false;
+      }
+    });
+
+    loadDashboard().catch((error) => {
+      document.querySelector('#connection-status').textContent = 'Weather log unavailable';
+      logsBody.replaceChildren();
+      const row = logsBody.insertRow();
+      appendCell(row, error.message, 'subtle');
+      row.firstElementChild.colSpan = 6;
+      if (typeof Chart === 'undefined') {
+        document.querySelector('#temperature-chart').replaceWith(document.createTextNode('Chart library unavailable.'));
+      }
+    });
+  </script>
+</body>
+</html>
